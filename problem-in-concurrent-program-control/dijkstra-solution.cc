@@ -7,18 +7,18 @@ using namespace std;
 
 #define COUNT 3
 
-bool certainlyOutsideCS[COUNT]; //Thread i is definitely outside of the Critical Section
-bool waitingToCheck[COUNT]; //Thread i is waiting to check if it can enter
-int threadTryingToEnterCS = 1;
+bool certainlyOutsideCS[COUNT]; //Thread i is certainly outside of the Critical Section (if false - it may be in or almost in)
+bool inactive[COUNT]; //Thread i is inactive when it wants to try to enter CS
+int turn = 1;
 
 void *PrintMessages(void *threadid) {
     long tid = (long)threadid;
     while(true) {
-        waitingToCheck[tid] = false;
-        L1: if (threadTryingToEnterCS != tid) {
+        inactive[tid] = false;
+        L1: if (turn != tid) {
             certainlyOutsideCS[tid] = true;
-            if (waitingToCheck[threadTryingToEnterCS]) {
-                threadTryingToEnterCS = tid;
+            if (inactive[turn]) {
+                turn = tid;
             }
             goto L1;
         }
@@ -38,7 +38,7 @@ void *PrintMessages(void *threadid) {
         //end critical section
 
         certainlyOutsideCS[tid] = true;
-        waitingToCheck[tid] = true;
+        inactive[tid] = true;
     }
     pthread_exit(NULL);
 }
@@ -46,7 +46,7 @@ void *PrintMessages(void *threadid) {
 int main() {
     for (int i = 0; i < COUNT; i++) {
         certainlyOutsideCS[i] = true;
-        waitingToCheck[i] = true;
+        inactive[i] = true;
     }
     pthread_t threads[COUNT];
     for (long i = 0; i < COUNT; i++) {
