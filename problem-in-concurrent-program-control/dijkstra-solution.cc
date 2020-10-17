@@ -8,26 +8,24 @@ using namespace std;
 #define COUNT 3
 
 bool certainlyOutsideCS[COUNT]; //Thread i is certainly outside of the Critical Section (if false - it may be in or almost in)
-bool inactive[COUNT]; //Thread i is inactive when it wants to try to enter CS
+bool wantsToEnter[COUNT];
 int turn = 1;
 
 void *PrintMessages(void *threadid) {
     long tid = (long)threadid;
     while(true) {
-        inactive[tid] = false;
-        L1: if (turn != tid) {
+        wantsToEnter[tid] = true;
+        L1: while (turn != tid) {
             certainlyOutsideCS[tid] = true;
-            if (inactive[turn]) {
+            if (wantsToEnter[turn] == false) {
                 turn = tid;
             }
-            goto L1;
         }
-        else {
-            certainlyOutsideCS[tid] = false;
-            for (int j = 0; j < COUNT; j++) { // check if another thread didn't get into CS
-                if (j != tid && !certainlyOutsideCS[j]) {
-                    goto L1;
-                }
+
+        certainlyOutsideCS[tid] = false;
+        for (int j = 0; j < COUNT; j++) { // check if another thread didn't get into CS
+            if (j != tid && !certainlyOutsideCS[j]) {
+                goto L1;
             }
         }
 
@@ -38,7 +36,7 @@ void *PrintMessages(void *threadid) {
         //end critical section
 
         certainlyOutsideCS[tid] = true;
-        inactive[tid] = true;
+        wantsToEnter[tid] = false;
     }
     pthread_exit(NULL);
 }
@@ -46,7 +44,7 @@ void *PrintMessages(void *threadid) {
 int main() {
     for (int i = 0; i < COUNT; i++) {
         certainlyOutsideCS[i] = true;
-        inactive[i] = true;
+        wantsToEnter[i] = false;
     }
     pthread_t threads[COUNT];
     for (long i = 0; i < COUNT; i++) {
